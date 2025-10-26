@@ -1,0 +1,14 @@
+{
+  "name": "zephyra-ai",
+  "version": "1.0.0",
+  "description": "Fake Chat WhatsApp API by Zephyra-AI",
+  "main": "fakechat.js",
+  "type": "module",
+  "scripts": {
+    "start": "node fakechat.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "canvas": "^3.1.0"
+  }
+}
