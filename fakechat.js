@@ -1,37 +1,87 @@
 import { createCanvas, loadImage } from 'canvas';
 
 export default async function handler(req, res) {
-  const { name = "Saurus", message = "Halo Dunia!", time = "23.00" } = req.query;
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Ukuran canvas
-  const canvas = createCanvas(800, 400);
-  const ctx = canvas.getContext("2d");
+  const { username = "Saurus", caption = "Halo dunia!", profilUrl } = req.query;
 
-  // Latar belakang WA
-  ctx.fillStyle = "#ECE5DD";
-  ctx.fillRect(0, 0, 800, 400);
+  if (!profilUrl) {
+    return res.status(400).json({ status: false, message: "profilUrl wajib diisi" });
+  }
 
-  // Bubble chat
-  ctx.fillStyle = "#DCF8C6";
-  ctx.roundRect(400, 150, 370, 80, 10);
-  ctx.fill();
+  try {
+    // Canvas
+    const width = 720;
+    const height = 1280;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
 
-  // Nama pengirim
-  ctx.fillStyle = "#075E54";
-  ctx.font = "bold 18px Arial";
-  ctx.fillText(name, 420, 170);
+    // Load background
+    const bg = await loadImage('https://files.catbox.moe/3gwr1l.jpg');
+    ctx.drawImage(bg, 0, 0, width, height);
 
-  // Pesan
-  ctx.fillStyle = "#000";
-  ctx.font = "16px Arial";
-  ctx.fillText(message, 420, 200);
+    // Load profil
+    const profileImg = await loadImage(profilUrl);
+    const ppSize = 70;
+    const ppX = 40;
+    const ppY = 250;
 
-  // Waktu
-  ctx.fillStyle = "#555";
-  ctx.font = "12px Arial";
-  ctx.fillText(time, 730, 220);
+    // Buat lingkaran profil
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ppX + ppSize/2, ppY + ppSize/2, ppSize/2, 0, Math.PI*2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(profileImg, ppX, ppY, ppSize, ppSize);
+    ctx.restore();
 
-  // Output ke browser
-  res.setHeader("Content-Type", "image/png");
-  res.send(canvas.toBuffer());
-}
+    // Username
+    ctx.font = '28px Arial';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(username, ppX + ppSize + 15, ppY + ppSize/2);
+
+    // Caption
+    ctx.font = 'bold 30px Arial';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const captionX = width / 2;
+    const captionY = height - 650;
+    const maxWidth = width - 100;
+    const lineHeight = 42;
+
+    function wrapTextCenter(ctx, text, x, y, maxWidth, lineHeight) {
+      let line = '';
+      for (let i = 0; i < text.length; i++) {
+        let testLine = line + text[i];
+        let testWidth = ctx.measureText(testLine).width;
+        if (testWidth > maxWidth && line !== '') {
+          ctx.fillText(line, x, y);
+          line = text[i];
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) ctx.fillText(line, x, y);
+    }
+
+    wrapTextCenter(ctx, caption, captionX, captionY, maxWidth, lineHeight);
+
+    // Output
+    const buffer = canvas.toBuffer();
+    res.setHeader('Content-Type', 'image/png');
+    res.status(200).send(buffer);
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ status: false, message: "Gagal generate gambar", error: e.message });
+  }
+  }
